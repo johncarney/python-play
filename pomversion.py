@@ -1,7 +1,12 @@
+"""Load an artifact version from a POM file or XML."""
+
 from lxml import etree
 from semantic_version import Version
 
 import io
+
+POM_NAMESPACE = {"pom": "http://maven.apache.org/POM/4.0.0"}
+
 
 class InvalidVersionError(Exception):
     def __init__(self, version_string, message=None):
@@ -23,14 +28,24 @@ class MissingVersionError(Exception):
 
 
 def load(file_or_filename="pom.xml"):
-    doc = etree.parse(file_or_filename)
-    namespace = dict(pom="http://maven.apache.org/POM/4.0.0")
+    """Loads the version from a POM file
 
-    try:
-        elements = doc.xpath("/pom:project/pom:version", namespaces=namespace)
-        version_string = elements[0].text.strip()
-    except IndexError:
-        raise MissingVersionError() from None
+    Parameters
+    ----------
+    file_or_filename : str
+        A file object or a file name to load the POM from.
+
+    Returns
+    -------
+    semantic_version.Version
+        The version from the POM file as a semantic version.
+    """
+
+    doc = etree.parse(file_or_filename)
+    elements = doc.xpath("/pom:project/pom:version", namespaces=POM_NAMESPACE)
+    if len(elements) < 1:
+        raise MissingVersionError()
+    version_string = elements[0].text.strip()
 
     try:
         return Version(version_string.strip())
@@ -39,4 +54,17 @@ def load(file_or_filename="pom.xml"):
 
 
 def from_xml(xml_string):
+    """Loads the version from POM XML
+
+    Parameters
+    ----------
+    file_or_xml_string : str
+        An XML string
+
+    Returns
+    -------
+    semantic_version.Version
+        The version from the XML as a semantic version.
+    """
+
     return load(io.StringIO(xml_string))

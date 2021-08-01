@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 
+"""
+Check that a merge request's POM artifact version is greater than
+the target branch's.
+"""
+
 import pomversion
 import os
 import subprocess
 import click
 
-from sys import argv, stderr
+from sys import argv, stdout, stderr
 from subprocess import PIPE
+
+
+def eprint(*args):
+    """Prints to stderr"""
+    print(*args, file=stderr)
 
 
 def load_pom(commit_ish, pom_file="pom.xml"):
@@ -37,13 +47,12 @@ def load_pom(commit_ish, pom_file="pom.xml"):
     return process.stdout
 
 
-def eprint(*args):
-    """Prints to stderr"""
-    print(*args, file=stderr)
-
-
 def load_version(commit_ish, description, pom_file="pom.xml"):
-    """Loads the version from a POM file.
+    """Loads the artifact version from a POM file.
+
+    If an error occured while loading the POM, or while extracting the
+    version string, None will be returned and an appropriate error
+    message will be sent to stderr.
 
     Parameters
     ----------
@@ -59,8 +68,7 @@ def load_version(commit_ish, description, pom_file="pom.xml"):
     Returns
     -------
     semantic_version.Version, or None
-        The semantic version from the POM file, or None if an error
-        was raised.
+        The artifact version from the POM file as a semantic version.
     """
 
     try:
@@ -72,6 +80,7 @@ def load_version(commit_ish, description, pom_file="pom.xml"):
         eprint(f'{description} version is invalid: "{err.version_string}"')
     except pomversion.MissingVersionError:
         eprint(f"{description} version is missing")
+    return None
 
 
 @click.command()
@@ -80,24 +89,21 @@ def load_version(commit_ish, description, pom_file="pom.xml"):
 @click.option("--pom-file", default="pom.xml", help="Path to pom file. Defaults to pom.xml.")
 @click.option("--quiet", "-q", is_flag=True, default=False, help="Only report errors.")
 def mr_version_check(target_commit_ish, source_commit_ish, pom_file, quiet):
+    output = os.devnull if quiet else stdout
+
     source_version = load_version(source_commit_ish, "Source", pom_file=pom_file)
     if source_version is None:
-        exit(1)
-
-    if not quiet:
-        print(f"Source version: {source_version}")
+        return(1)
+    print(f"Source version: {source_version}", file=output)
 
     target_version = load_version(target_commit_ish, "Target", pom_file=pom_file)
     if target_version is None:
-        exit(0)
-
-    if not quiet:
-        print(f"Target version: {target_version}")
+        return(0)
+    print(f"Target version: {target_version}", file=output)
 
     if source_version <= target_version:
         eprint( "Current version must be greater than target version")
-        exit(1)
-
+    return(0)
 
 if __name__ == "__main__":
-    mr_version_check()
+    exit(mr_version_check())
