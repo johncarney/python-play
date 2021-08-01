@@ -9,7 +9,7 @@ from sys import argv, stderr
 from subprocess import PIPE
 
 
-def load_pom_xml(commit_ish, pom_file="pom.xml"):
+def load_pom(commit_ish, pom_file="pom.xml"):
     """Loads the contents of a POM file.
 
     Parameters
@@ -30,12 +30,8 @@ def load_pom_xml(commit_ish, pom_file="pom.xml"):
         with open(pom_file, "r") as file:
             return file.read()
 
-    command = ["git", "show", f"{commit_ish}:{pom_file}"]
-    process = subprocess.run(
-        command,
-        stdout=PIPE,
-        stderr=PIPE,
-        universal_newlines=True)
+    command = ("git", "show", f"{commit_ish}:{pom_file}")
+    process = subprocess.run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     if process.returncode != 0:
         raise(FileNotFoundError(process.stderr.strip()))
     return process.stdout
@@ -68,7 +64,7 @@ def load_version(commit_ish, description, pom_file="pom.xml"):
     """
 
     try:
-        pom_xml = load_pom_xml(commit_ish, pom_file=pom_file)
+        pom_xml = load_pom(commit_ish, pom_file=pom_file)
     except FileNotFoundError:
         eprint(f'"{pom_file}" does not exist in {description.lower()}')
 
@@ -81,21 +77,24 @@ def load_version(commit_ish, description, pom_file="pom.xml"):
 
 
 @click.command()
-@click.argument("target_ref")
-@click.argument("source_ref", required=False)
-@click.option("--pom-file", default="pom.xml", help="Path to pom file")
-def mr_version_check(target_ref, source_ref, pom_file):
-    source_version = load_version(source_ref, "Source", pom_file=pom_file)
+@click.argument("target_commit_ish")
+@click.argument("source_commit_ish", required=False)
+@click.option("--pom-file", default="pom.xml", help="Path to pom file. Defaults to pom.xml.")
+@click.option("--quiet", "-q", is_flag=True, default=False, help="Only report errors.")
+def mr_version_check(target_commit_ish, source_commit_ish, pom_file, quiet):
+    source_version = load_version(source_commit_ish, "Source", pom_file=pom_file)
     if source_version is None:
         exit(1)
 
-    print(f"Source version: {source_version}")
+    if not quiet:
+        print(f"Source version: {source_version}")
 
-    target_version = load_version(target_ref, "Target", pom_file=pom_file)
+    target_version = load_version(target_commit_ish, "Target", pom_file=pom_file)
     if target_version is None:
         exit(0)
 
-    print(f"Target version: {target_version}")
+    if not quiet:
+        print(f"Target version: {target_version}")
 
     if source_version <= target_version:
         eprint( "Current version must be greater than target version")
