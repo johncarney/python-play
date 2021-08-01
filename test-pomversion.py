@@ -74,3 +74,10 @@ with open("missing-version-pom.xml", "r") as file:
         print(f"  => {pomversion.from_xml(file.read())}")
     except Exception as err:
         print(f"  => {type(err).__name__}{err.args}")
+
+print("---")
+print('pomversion.load("no-such-pom.xml")')
+try:
+    print(f"  => {pomversion.load('no-such-pom.xml')}")
+except Exception as err:
+    print(f"  => {type(err).__name__}{err.args}")
