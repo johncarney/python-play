@@ -66,8 +66,8 @@ def load_version(commit_ish, description, pom_file="pom.xml"):
     try:
         pom_xml = load_pom(commit_ish, pom_file=pom_file)
         return pomversion.from_xml(pom_xml)
-    except FileNotFoundError:
-        eprint(f'"{pom_file}" does not exist in {description.lower()}')
+    except FileNotFoundError as err:
+        eprint(f'Error retrieving POM file: "{err}"')
     except pomversion.InvalidVersionError as err:
         eprint(f'{description} version is invalid: "{err.version_string}"')
     except pomversion.MissingVersionError:
