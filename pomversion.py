@@ -1,8 +1,8 @@
 """Load an artifact version from a POM file or XML."""
 
-from lxml import etree
 from semantic_version import Version
 
+import xml.etree.ElementTree as ElementTree
 import io
 
 POM_NAMESPACE = {"pom": "http://maven.apache.org/POM/4.0.0"}
@@ -41,8 +41,10 @@ def load(file_or_filename="pom.xml"):
         The version from the POM file as a semantic version.
     """
 
-    doc = etree.parse(file_or_filename)
-    elements = doc.xpath("/pom:project/pom:version", namespaces=POM_NAMESPACE)
+    root = ElementTree.parse(file_or_filename)
+    elements = root.findall("./pom:version", POM_NAMESPACE)
+    # doc = etree.parse(file_or_filename)
+    # elements = doc.xpath("/pom:project/pom:version", namespaces=POM_NAMESPACE)
     if len(elements) < 1:
         raise MissingVersionError()
     version_string = elements[0].text.strip()
